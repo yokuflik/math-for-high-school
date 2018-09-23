@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +12,145 @@ namespace math
     {
         public bool error { get; set; }
 
-        public EqualinationRes calcEqualination(string text)
+        #region things to string
+
+        public string pointFToString(PointF p)
+        {
+            return "(" + numberToString(p.X) + ", " + numberToString(p.Y) + ")";
+        }
+
+        public string numberToString(float num)
+        {
+            return string.Format("{0:0.####}", num);
+        }
+
+        public string numberToString(double num)
+        {
+            return string.Format("{0:0.####}", num);
+        }
+
+        public string numberToString(decimal num)
+        {
+            return string.Format("{0:0.####}", num);
+        }
+
+        public string getStringFromListOfSymbols(List<Symbol> symbols)
+        {
+            string res = "";
+            for (int i = 0; i <= symbols.Count - 1; i++)
+            {
+                res += symbols[i].ToString();
+            }
+            return res;
+        }
+
+        private string getStringOfXListMinusStartIndex(List<decimal> xList, int startIndex, int endIndex)
+        {
+            SmallEqualination res = new SmallEqualination();
+            for (int i = startIndex + 1; i <= endIndex; i++) //add all the x list minus the start power
+            {
+                res.XList.Add(xList[i]);
+            }
+            res.Num = xList[startIndex];
+            return res.ToString();
+        }
+
+        #endregion
+
+        #region for displaying and clacing funcs
+
+        public decimal putXInEqualination(SmallEqualination smallEqualination, double x, ref string way)
+        {
+            return putXInEqualination(getSymbolsFromSmallEqualination(smallEqualination), x, ref way);
+        }
+
+        public decimal putXInEqualination(List<Symbol> symbols, double x, ref string way)
+        {
+            List<Symbol> symbols2 = new List<Symbol>();
+            symbols2.AddRange(symbols);
+            for (int i = 0; i <= symbols2.Count - 1; i++)
+            {
+                if (symbols2[i].Kind == Symbol.SymbolKinds.x)
+                {
+                    try
+                    {
+                        symbols2[i] = new Symbol(Symbol.SymbolKinds.number, symbols2[i].Num * (decimal)Math.Pow(x, symbols2[i].Pow));
+                    }
+                    catch
+                    {
+                        //check if the value is plus or minus
+                        bool minus = false;
+                        if (symbols2[i].Num > 0 && x > 0)
+                        {
+                            minus = false;
+                        }
+                        else
+                        {
+                            if (symbols2[i].Pow % 2 == 0) //if the power is double
+                            {
+                                if (symbols2[i].Num < 0)
+                                {
+                                    minus = true;
+                                }
+                            }
+                            else
+                            {
+                                if (symbols2[i].Num < 0 && x < 0)
+                                {
+                                    minus = false;
+                                }
+                                else if (symbols2[i].Num < 0 || x< 0)
+                                {
+                                    minus = true;
+                                }
+                            }
+                        }
+
+                        if (minus)
+                        {
+                            return decimal.MinValue;
+                        }
+                        else
+                        {
+                            return decimal.MaxValue;
+                        }
+                    }
+                }
+            }
+            way += "\n" + getStringFromListOfSymbols(symbols2);
+            CalcExercise calc = new CalcExercise();
+            return calc.getSmallerEqualinationFromSymbols(symbols2, true, ref way).Num;
+        }
+
+        public bool checkIfIsInTheDomainDefinition(List<FuncDomainDefinition> domainDefinition, decimal x)
+        {
+            for (int i = 0; i <= domainDefinition.Count - 1; i++)
+            {
+                if (domainDefinition[i].Kind == FuncDomainDefinition.DomainDefinitionKinds.xNotEquals && domainDefinition[i].X == x)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public int getBiggestPowerFormXList(List<decimal> xList)
+        {
+            for (int i = xList.Count - 1; i >= 0; i--)
+            {
+                if (xList[i] != 0)
+                {
+                    return i;
+                }
+            }
+            return 0;
+        }
+
+        #endregion
+
+        #region get equalination res and end res funcs
+
+        public EqualinationRes calcEqualination(string text, ref string way)
         {
             //check the kind of the equalination
             int equalSignIndex = text.IndexOf('=');
@@ -24,45 +163,211 @@ namespace math
             {
                 string sideOneText = text.Substring(0, equalSignIndex);
                 string sideTwoText = text.Substring(equalSignIndex+1, text.Length - equalSignIndex - 1);
-                return calcRegularEqualinationFromText(sideOneText, sideTwoText);
+                return calcRegularEqualinationFromText(sideOneText, sideTwoText, ref way);
             }
             else
             {
-                return getSmallerEqualinationFromText(text);
+                return getSmallerEqualinationFromText(text, ref way);
             }
         }
 
-        public EqualinationRes calcRegularEqualinationFromText(string sideOne, string sideTwo)
+        public EqualinationRes calcRegularEqualinationFromText(string sideOne, string sideTwo, ref string way)
         {
-            SmallEqualination sideOneSymbols = getSmallerEqualinationFromText(sideOne);
-            SmallEqualination sideTwoSymbols = getSmallerEqualinationFromText(sideTwo);
-            return calcRegularEqualinationFromSymbols(sideOneSymbols, sideTwoSymbols);
+            SmallEqualination sideOneSymbols = getSmallerEqualinationFromText(sideOne, ref way);
+            SmallEqualination sideTwoSymbols = getSmallerEqualinationFromText(sideTwo, ref way);
+            return calcRegularEqualinationFromSmallEqualinations(sideOneSymbols, sideTwoSymbols, ref way);
         }
 
-        private EqualinationRes calcRegularEqualinationFromSymbols(SmallEqualination sideOne, SmallEqualination sideTwo)
+        public EqualinationRes calcRegularEqualinationFromSmallEqualinations(SmallEqualination sideOne, SmallEqualination sideTwo, ref string way)
         {
             SmallEqualination smallRes = subtractTwoSmallEqualinations(sideOne, sideTwo);
+            way += "\n" + smallRes.ToString() + " = 0";
+
             //check what kind of equalination is it
-            EqualinationRes res = new EqualinationRes();
-            if (smallRes.XList.Count == 1) //regular equlination
+            if (smallRes.numbersAndX.Count == 0)
             {
+                return calcEqualinationFromSmallResWithoutNumberAndXList(smallRes, ref way);
+            }
+            else
+            {
+                return calcEqualinationFromSmallResWithNumberAndXList(smallRes, ref way);
+            }
+        }
+
+        private EqualinationRes calcEqualinationFromSmallResWithNumberAndXList(SmallEqualination smallRes, ref string way)
+        {
+            findCommonGroundAndMultiplayTheResWithIt(ref smallRes, ref way);
+            return new EqualinationRes();
+        }
+
+        private void findCommonGroundAndMultiplayTheResWithIt(ref SmallEqualination smallRes, ref string way)
+        {
+            SmallEqualination commonGround = new SmallEqualination(1, new List<decimal>());
+            for (int i = 0; i <= smallRes.numbersAndX.Count - 1; i++)
+            {
+                //find the common ground
+            }
+        }
+
+        private EqualinationRes calcEqualinationFromSmallResWithoutNumberAndXList(SmallEqualination smallRes, ref string way)
+        {
+            EqualinationRes res = new EqualinationRes();
+            if (smallRes.XList.Count == 0)
+            {
+                return res;
+            }
+            else if (smallRes.XList.Count == 1) //regular equlination
+            {
+                way += "\nx = " + numberToString((-smallRes.Num) / smallRes.XList[0]);
                 res.Results.Add((-smallRes.Num) / smallRes.XList[0]);
             }
             else if (smallRes.XList.Count == 2)
             {
-                return rootFormula(smallRes.XList[1], smallRes.XList[0], smallRes.Num);
+                return rootFormula(smallRes.XList[1], smallRes.XList[0], smallRes.Num, ref way);
             }
             else
             {
+                //check if has only one x
+                int count = 0;
+                int startIndex = -1;
+                int endIndex = 0;
+                for (int i = 0; i <= smallRes.XList.Count - 1; i++)
+                {
+                    if (smallRes.XList[i] != 0)
+                    {
+                        count++;
+                        if (startIndex == -1)
+                        {
+                            startIndex = i;
+                        }
+                        endIndex = i;
+                    }
+                }
+
+                if (count == 1) //the equalination has only one x like: x^3-1=0
+                {
+                    if (smallRes.Num == 0)//x^3-0=0
+                    {
+                        res.Results.Add(0);
+                        way += "\nx = 0";
+                        return res;
+                    }
+                    else
+                    {
+                        smallRes.Num /= -smallRes.XList[startIndex];
+                        way += "\n" + new Symbol(Symbol.SymbolKinds.x, smallRes.XList[startIndex], startIndex + 1).ToString() + " = " + numberToString(smallRes.Num);
+                        if ((startIndex + 1) % 2 == 0) //if the power is double
+                        {
+                            //if two of them are plus or minus so dousent have a result
+                            //if ((smallRes.XList[startIndex] > 0 && smallRes.Num > 0) || (smallRes.XList[startIndex] < 0 && smallRes.Num < 0))
+                            if (smallRes.Num < 0)
+                            {
+                                return res;
+                            }
+                            res.Results.Add(-(decimal)Math.Pow((double)smallRes.Num, 1 / (startIndex + 1))); //if the power is adouble number it has +-root answer
+                            way += "\nx = " + numberToString(res.Results[res.Results.Count - 1]);
+                        }
+                        res.Results.AddRange(getAnswerFromRoot(smallRes.Num, startIndex + 1, ref way));
+                    }
+                    return res;
+                }
+                else if (count == 2 && smallRes.Num == 0)
+                {
+                    way += "\nx^" + (startIndex + 1).ToString() + "(" + getStringOfXListMinusStartIndex(smallRes.XList, startIndex, endIndex) + ") = 0";
+                    res.Results.Add(0);
+                    way += "\nx = 0";
+                    smallRes.XList[startIndex] /= -smallRes.XList[endIndex];
+                    res.Results.AddRange(getAnswerFromRoot(smallRes.XList[startIndex], endIndex - startIndex, ref way));
+                    return res;
+                }
+                else if (count == 3 && smallRes.Num == 0)
+                {
+                    if (endIndex - startIndex < 3)
+                    {
+                        way += "\nx(" + getStringOfXListMinusStartIndex(smallRes.XList, startIndex, endIndex) + ") = 0";
+                        res.Results.Add(0);
+                        way += "\nx = 0";
+                        if (endIndex - startIndex == 2)
+                        {
+                            res = rootFormula(smallRes.XList[startIndex + 2], smallRes.XList[startIndex + 1], smallRes.XList[startIndex], ref way);
+                        }
+                        else if (endIndex - startIndex == 1)
+                        {
+                            res.Results.Add(smallRes.XList[startIndex] / smallRes.XList[endIndex]);
+                            way += "\nx = " + numberToString(res.Results[res.Results.Count - 1]);
+                        }
+                        return res;
+                    }
+                }
                 res.cantSolve = true;
             }
             return res;
         }
 
+        private EqualinationRes rootFormula(decimal a, decimal b, decimal c, ref string way)
+        {
+            EqualinationRes res = new EqualinationRes();
+            //check if b^2-4ac isnt below zero
+            decimal root = b * b - 4 * a * c;
+            if (root < 0)
+            {
+                return res;
+            }
+            root = (decimal)Math.Sqrt((double)root);
+            if (root == 0)
+            {
+                res.Results.Add(-b / (2 * a));
+                way += "\nx = " + numberToString(res.Results[res.Results.Count - 1]);
+            }
+            else
+            {
+                res.Results.Add((-b + root) / (2 * a));
+                way += "\nx = " + numberToString(res.Results[res.Results.Count - 1]);
+                res.Results.Add((-b - root) / (2 * a));
+                way += "\nx = " + numberToString(res.Results[res.Results.Count - 1]);
+            }
+            return res;
+        }
+        
+        private List<decimal> getAnswerFromRoot(decimal num, int power, ref string way)
+        {
+            List<decimal> res = new List<decimal>();
+            CalcExercise calc = new CalcExercise();
+            if (num < 0)
+            {
+                if (power % 2 == 0) //the power is double so cant do root
+                {
+                    return new List<decimal>();
+                }
+                res.Add((decimal)-Math.Pow((double)-num, (double)1 / (double)power));
+                way += "\nx = " + calc.numberToString(res[res.Count - 1]);
+            }
+            else
+            {
+                if (power % 2 == 0) //if the power iis double so the root is +-num
+                {
+                    res.Add((decimal)-Math.Pow((double)num, (double)1 / power));
+                    way += "\nx = " + calc.numberToString(res[res.Count - 1]);
+                }
+                res.Add((decimal)Math.Pow((double)num, (double)1 / power));
+                way += "\nx = " + calc.numberToString(res[res.Count - 1]);
+            }
+            return res;
+        }
+
+        #endregion
+
+        #region get small equalination
+
         private SmallEqualination subtractTwoSmallEqualinations(SmallEqualination one, SmallEqualination two)
         {
             if (one.XList.Count > two.XList.Count)
             {
+                //add the numbers and x list
+                for (int i = 0; i <= two.numbersAndX.Count - 1; i++)
+                {
+                    one.numbersAndX.Add(two.numbersAndX[i].getMinus(two.numbersAndX[i]));
+                }
                 one.Num -= two.Num;
                 for (int i =0;i<=two.XList.Count - 1; i++)
                 {
@@ -72,6 +377,11 @@ namespace math
             }
             else
             {
+                //add the numbers and x list
+                for (int i = 0; i <= one.numbersAndX.Count - 1; i++)
+                {
+                    two.numbersAndX.Add(one.numbersAndX[i].getMinus(one.numbersAndX[i]));
+                }
                 two.Num -= one.Num;
                 for (int i = 0; i <= one.XList.Count - 1; i++)
                 {
@@ -81,28 +391,7 @@ namespace math
             }
         }
 
-        private EqualinationRes rootFormula(decimal a, decimal b, decimal c)
-        {
-            EqualinationRes res = new EqualinationRes();
-            //check if b^2-4ac isnt below zero
-            decimal root = (decimal)Math.Sqrt((double)(b * b - 4 * a * c));
-            if (root < 0)
-            {
-                return res;
-            }
-            else if (root == 0)
-            {
-                res.Results.Add(-b / (2 * a));
-            }
-            else
-            {
-                res.Results.Add((-b + root) / (2 * a));
-                res.Results.Add((-b - root) / (2 * a));
-            }
-            return res;
-        }
-
-        public SmallEqualination getSmallerEqualinationFromText(string text)
+        public SmallEqualination getSmallerEqualinationFromText(string text, ref string way)
         {
             error = false;
             //start solving
@@ -111,14 +400,15 @@ namespace math
             List<Symbol> symbols = getAListOfNumbersFromString(text);
 
             //calc the list of numbers
-            SmallEqualination res = getSmallerEqualinationFromSymbols(symbols, true);
+            SmallEqualination res = getSmallerEqualinationFromSymbols(symbols, true, ref way);
 
             //show the answer
             return res;
         }
 
-        public SmallEqualination getSmallerEqualinationFromSymbols(List<Symbol> symbols, bool checkProblems)
+        public SmallEqualination getSmallerEqualinationFromSymbols(List<Symbol> symbols, bool checkProblems, ref string way)
         {
+            way += "\n" + getStringFromListOfSymbols(symbols);
             //check if the list has problems
             if (checkProblems && checkForProblems(ref symbols))
             {
@@ -127,33 +417,37 @@ namespace math
             }
 
             //calc the list of numbers
-            return startCalcing(symbols);
+            return startCalcing(symbols, ref way);
         }
+
+        #endregion
 
         #region calcing
 
-        private SmallEqualination startCalcing(List<Symbol> symbols)
+        private SmallEqualination startCalcing(List<Symbol> symbols, ref string way)
         {
             if (symbols.Count == 0)
             {
                 return new SmallEqualination(0, new List<decimal>());
             }
+            SmallEqualination res = new SmallEqualination();
             //1
             //calc the parenthessis
-            calcParenthessis(ref symbols);
+            calcParenthessis(ref symbols, ref res);
 
             //2
             //calc the multiplay and divide
-            calcPowerAndMultiplayAndDivide(ref symbols);
+            calcPowerAndMultiplayAndDivide(ref symbols, ref res);
 
             //3
             //calc the plus and minus
-            return calcPlusAndMinus(symbols);
+            calcPlusAndMinus(symbols, ref way, ref res);
+            return res;
         }
 
         #region parenthessis
 
-        private void calcParenthessis(ref List<Symbol> symbols)
+        private void calcParenthessis(ref List<Symbol> symbols, ref SmallEqualination smallEqualination)
         {
             //check for parenthessis start and if finds check where is the end and then calcs it
             for (int i = 0; i <= symbols.Count - 1; i++)
@@ -175,21 +469,37 @@ namespace math
                         {
                             if (parenthessisStart == 0)
                             {
+                                string way = "";
                                 //calc the parenthessis and before and after multiplay
-                                SmallEqualination res = getSmallerEqualinationFromSymbols(symbols.GetRange(start + 1, count), false);
+                                SmallEqualination res = getSmallerEqualinationFromSymbols(symbols.GetRange(start + 1, count), false, ref way);
 
                                 end = start + count + 2;
-                                res = multiplayTwoSmallEqualinations(res, getBeforeAndAfterOnePart(symbols, ref start, ref end));
-
+                                bool devideBeforeOrAfter = false;
+                                
+                                res = multiplayTwoSmallEqualinations(res, getBeforeAndAfterOnePart(symbols, ref start, ref end, ref devideBeforeOrAfter));
+                                if (start < 0)
+                                {
+                                    start = 0;
+                                }
                                 //remove all the parenthessis and put the res
                                 symbols.RemoveRange(start, end - start);
-
-                                //putt the res
-                                //symbols[start].Kind = Symbol.SymbolKinds.number;
-                                //symbols[start].Num = res;
-                                symbols.InsertRange(start, getSymbolsFromSmallEqualination(res));
-                                
+                                if (devideBeforeOrAfter)
+                                {
+                                    List<Symbol> pSymbols = new List<Symbol>();
+                                    //add parenthessis start and parenthessis end before and after th parenthessis res
+                                    pSymbols.Add(new Symbol(Symbol.SymbolKinds.parenthesisStart));
+                                    pSymbols.AddRange(getSymbolsFromSmallEqualination(res));
+                                    pSymbols.Add(new Symbol(Symbol.SymbolKinds.parenthesisEnd));
+                                    symbols.InsertRange(start, pSymbols);
+                                }
+                                else
+                                {
+                                    //putt the res
+                                    symbols.InsertRange(start, getSymbolsFromSmallEqualination(res));
+                                    symbols.Insert(start, new Symbol(Symbol.SymbolKinds.plus));
+                                }
                                 j = symbols.Count - 1;
+                                count = -1;
                             }
                             else
                             {
@@ -206,11 +516,6 @@ namespace math
         {
             List<Symbol> res = new List<Symbol>();
 
-            //add the number
-            if (smallEqualination.Num != 0)
-            {
-                res.Add(new Symbol(Symbol.SymbolKinds.number, smallEqualination.Num));
-            }
 
             //add the x list
             for (int i = 0; i <= smallEqualination.XList.Count - 1; i++)
@@ -225,41 +530,48 @@ namespace math
                 }
             }
 
+            //add the number and x list
+            for (int i = 0; i <= smallEqualination.numbersAndX.Count - 1; i++)
+            {
+                res.AddRange(smallEqualination.numbersAndX[i].getSymbols(smallEqualination.numbersAndX[i]));
+            }
+
+            //add the number
+            if (smallEqualination.Num != 0 || res.Count == 0)
+            {
+                if (res.Count > 0)
+                {
+                    res.Add(new Symbol(Symbol.SymbolKinds.plus));
+                }
+                res.Add(new Symbol(Symbol.SymbolKinds.number, smallEqualination.Num));
+            }
+
             return res;
         }
 
-        private SmallEqualination getBeforeAndAfterOnePart(List<Symbol> symbols, ref int startPIndex, ref int endPIndex)
+        private SmallEqualination getBeforeAndAfterOnePart(List<Symbol> symbols, ref int startPIndex, ref int endPIndex, ref bool startsOrEndsWithDevide)
         {
             SmallEqualination res = new SmallEqualination(1, new List<decimal>());
-            res = multiplayTwoSmallEqualinations(res, getBeforeIndexOnePart(symbols, ref startPIndex));
-            res = multiplayTwoSmallEqualinations(res, getAfterIndexOnePart(symbols, ref endPIndex));
+            res = multiplayTwoSmallEqualinations(res, getBeforeIndexOnePart(symbols, ref startPIndex, ref startsOrEndsWithDevide));
+            res = multiplayTwoSmallEqualinations(res, getAfterIndexOnePart(symbols, ref endPIndex, ref startsOrEndsWithDevide));
             return res;
         }
 
-        private SmallEqualination getBeforeIndexOnePart(List<Symbol> symbols, ref int startPIndex)
+        private SmallEqualination getBeforeIndexOnePart(List<Symbol> symbols, ref int startPIndex, ref bool startsWithDevide)
         {
             if (startPIndex == 0)
             {
                 return new SmallEqualination(1, new List<decimal>());
             }
-
-            //startPIndex--;
+            
             SmallEqualination res = new SmallEqualination(1, new List<decimal>());
-
-            /*if (symbols[startPIndex].Kind == Symbol.SymbolKinds.number)
-            {
-                res.Num = symbols[startPIndex].Num;
-            }
-            else if (symbols[startPIndex].Kind == Symbol.SymbolKinds.x)
-            {
-                res.XList = addXToTheList(symbols[startPIndex], new List<decimal>());
-            }*/
-
+            
             int count = 0;
             int parenthessis = 0;
             int addSymbol = 0;
+            startPIndex--;
             //get the before numbers
-            for (; startPIndex > 0; startPIndex--)
+            for (; startPIndex >= 0; startPIndex--)
             {
                 if (symbols[startPIndex].Kind == Symbol.SymbolKinds.parenthesisEnd)
                 {
@@ -273,13 +585,19 @@ namespace math
                 {
                     if (symbols[startPIndex].Kind == Symbol.SymbolKinds.minus)
                     {
-                        addSymbol = 1;
-                        startPIndex++;
+                        res.Num = -res.Num;
+                        //startPIndex++;
                         break;
                     }
-                    else if (symbols[startPIndex].Kind == Symbol.SymbolKinds.plus || symbols[startPIndex].Kind == Symbol.SymbolKinds.divide)
+                    else if (symbols[startPIndex].Kind == Symbol.SymbolKinds.plus)
+                    {
+                        //startPIndex++;
+                        break;
+                    }
+                    else if (symbols[startPIndex].Kind == Symbol.SymbolKinds.divide)
                     {
                         startPIndex++;
+                        startsWithDevide = true;
                         break;
                     }
                 }
@@ -287,18 +605,20 @@ namespace math
             }
             if (count > 0)
             {
-                SmallEqualination smallEqualinationRes = getSmallerEqualinationFromSymbols(symbols.GetRange(startPIndex-addSymbol, count+addSymbol), false);
+                string way = "";
+                SmallEqualination smallEqualinationRes = getSmallerEqualinationFromSymbols(symbols.GetRange(startPIndex+1-addSymbol, count+addSymbol), false, ref way);
                 res = multiplayTwoSmallEqualinations(res, smallEqualinationRes);
             }
             return res;
         }
 
-        private SmallEqualination getAfterIndexOnePart(List<Symbol> symbols, ref int endPIndex)
+        private SmallEqualination getAfterIndexOnePart(List<Symbol> symbols, ref int endPIndex, ref bool endsWithDevide)
         {
-            if (endPIndex >= symbols.Count - 1)
+            if (endPIndex > symbols.Count - 1)
             {
                 return new SmallEqualination(1,new List<decimal>());
             }
+            
 
             SmallEqualination res = new SmallEqualination(1, new List<decimal>());
             int count = 0;
@@ -314,21 +634,27 @@ namespace math
                 {
                     parenthessis--;
                 }
-                else if (parenthessis == 0 && (symbols[endPIndex].Kind == Symbol.SymbolKinds.minus || symbols[endPIndex].Kind == Symbol.SymbolKinds.plus || symbols[endPIndex].Kind == Symbol.SymbolKinds.divide || symbols[endPIndex].Kind == Symbol.SymbolKinds.power))
+                else if (parenthessis == 0 && (symbols[endPIndex].Kind == Symbol.SymbolKinds.minus || symbols[endPIndex].Kind == Symbol.SymbolKinds.plus || symbols[endPIndex].Kind == Symbol.SymbolKinds.power))
                 {
+                    break;
+                }
+                else if (symbols[endPIndex].Kind == Symbol.SymbolKinds.divide)
+                {
+                    endsWithDevide = true;
                     break;
                 }
                 count++;
             }
             if (count > 0)
             {
-                SmallEqualination smallEqualinationRes = getSmallerEqualinationFromSymbols(symbols.GetRange(endPIndex - count, count), false);
+                string way = "";
+                SmallEqualination smallEqualinationRes = getSmallerEqualinationFromSymbols(symbols.GetRange(endPIndex - count+1, count-1), false, ref way);
                 res = multiplayTwoSmallEqualinations(res, smallEqualinationRes);
             }
             return res;
         }
         
-        private SmallEqualination multiplayTwoSmallEqualinations(SmallEqualination one, SmallEqualination two)
+        public SmallEqualination multiplayTwoSmallEqualinations(SmallEqualination one, SmallEqualination two)
         {
             List<Symbol> res = new List<Symbol>();
 
@@ -347,14 +673,17 @@ namespace math
                 }
             }
 
-            return calcPlusAndMinus(res);
+            string way = "";
+            SmallEqualination smallEqualination = new SmallEqualination();
+            calcPlusAndMinus(res, ref way, ref smallEqualination);
+            return smallEqualination;
         }
 
         #endregion
 
         #region power multiplay and devide
 
-        private void calcPowerAndMultiplayAndDivide(ref List<Symbol> symbols)
+        private void calcPowerAndMultiplayAndDivide(ref List<Symbol> symbols, ref SmallEqualination smallEqualination)
         {
             //calc power
             for (int i = 1; i <= symbols.Count - 2; i++)
@@ -422,41 +751,121 @@ namespace math
                         symbols[i - 1].Num = -symbols[i - 1].Num;
                         secondNum = 2;
                     }
-                    if (symbols[i+secondNum].Num == 0)
+                    if ((symbols[i + secondNum].Kind == Symbol.SymbolKinds.number || symbols[i + secondNum].Kind == Symbol.SymbolKinds.x)&& symbols[i+secondNum].Num == 0)//like 2/0
                     {
                         error = true;
+                        return;
                     }
                     int startIndex = 0;
                     int endIndex = 0;
-                    //List<Symbol> devideRes = getDevideSymbols(symbols, i, ref startIndex, ref endIndex);
-                    symbols[i - 1].Num /= symbols[i + secondNum].Num;
-                    symbols.RemoveRange(i-1, secondNum + 2);
-                    i--;
+                    SmallEqualination before = new SmallEqualination();
+                    SmallEqualination after = new SmallEqualination();
+                    getDevideSymbols(symbols, ref before, ref after, i, ref startIndex, ref endIndex);
+                    if (startIndex < 0)
+                    {
+                        startIndex++;
+                    }
+                    symbols.RemoveRange(startIndex, endIndex - startIndex);
+                    i = startIndex;
+                    bool canDev = false;
+                    List<Symbol> dev = devideTwoEqualinationRes(before, after, ref canDev);
+                    if (canDev)
+                    {
+                        symbols.Add(new Symbol(Symbol.SymbolKinds.plus));
+                        symbols.AddRange(dev);
+                    }
+                    else
+                    {
+                        smallEqualination.numbersAndX.Add(new Devide(before, after));
+                    }
+                    //symbols[i - 1].Num /= symbols[i + secondNum].Num;
+                    //symbols.RemoveRange(i-1, secondNum + 2);
+                    //i--;
                     
                 }
             }
         }
 
-        private List<Symbol> getDevideSymbols(List<Symbol> symbols, int i, ref int startIndex, ref int endIndex)
+        private List<Symbol> devideTwoEqualinationRes(SmallEqualination before, SmallEqualination after, ref bool canDev)
         {
             List<Symbol> res = new List<Symbol>();
+            if (after.XList.Count == 0)
+            {
+                if (after.Num == 0)
+                {
+                    error = true;
+                    return res;
+                }
+                if (before.Num != 0)
+                {
+                    res.Add(new Symbol(Symbol.SymbolKinds.number, before.Num / after.Num));
+                }
+                for (int i = 0; i <= before.XList.Count - 1; i++)
+                {
+                    if (before.XList[i] != 0)
+                    {
+                        if (res.Count != 0)
+                        {
+                            res.Add(new Symbol(Symbol.SymbolKinds.plus));
+                        }
+                        res.Add(new Symbol(Symbol.SymbolKinds.x, before.XList[i] / after.Num, i + 1));
+                    }
+                }
+                canDev = true;
+            }
+            else
+            {
+                canDev = false;
+            }
+            return res;
+        }
 
+        private void getDevideSymbols(List<Symbol> symbols, ref SmallEqualination symbolsBefore, ref SmallEqualination symbolsAfter, int i, ref int startIndex, ref int endIndex)
+        {
             //get the before index
-            res.Add(new Symbol(Symbol.SymbolKinds.parenthesisStart));
-            startIndex = i-1;
-            SmallEqualination beforeRes = getBeforeIndexOnePart(symbols, ref startIndex);
-            addSmallEqualinationToListSymbols(ref res, beforeRes);
-            res.Add(new Symbol(Symbol.SymbolKinds.parenthesisEnd));
+            startIndex = i;
+            bool devBeforeOrAfter = false;
+            symbolsBefore = getBeforeIndexOnePart(symbols, ref startIndex, ref devBeforeOrAfter);
             
-            res.Add(new Symbol(Symbol.SymbolKinds.divide));
-
             //get the after index
-            res.Add(new Symbol(Symbol.SymbolKinds.parenthesisStart));
-            endIndex = i +1;
-            SmallEqualination afterRes = getBeforeIndexOnePart(symbols, ref endIndex);
-            addSmallEqualinationToListSymbols(ref res, afterRes);
-            res.Add(new Symbol(Symbol.SymbolKinds.parenthesisEnd));
+            endIndex = i+1;
+            symbolsAfter = getAfterDevideSmallEqualination(symbols, ref endIndex);
+        }
 
+        private SmallEqualination getAfterDevideSmallEqualination(List<Symbol> symbols, ref int endIndex)
+        {
+            //move an the list of symbols and if the number end return it
+            SmallEqualination res = new SmallEqualination();
+            int parenthessis = 0;
+            int count = 1;
+            int start = endIndex;
+            for (; endIndex <= symbols.Count - 1; endIndex++)
+            {
+                if (symbols[endIndex].Kind == Symbol.SymbolKinds.parenthesisStart)
+                {
+                    parenthessis++;
+                }
+                else if(symbols[endIndex].Kind == Symbol.SymbolKinds.parenthesisEnd)
+                {
+                    parenthessis--;
+                }
+                else if (parenthessis == 0)
+                {
+                    if (endIndex != start)
+                    {
+                        if (symbols[endIndex].Kind == Symbol.SymbolKinds.multiplay || symbols[endIndex].Kind == Symbol.SymbolKinds.divide || symbols[endIndex].Kind == Symbol.SymbolKinds.plus || symbols[endIndex].Kind == Symbol.SymbolKinds.minus)
+                        {
+                            break;
+                        }
+                    }
+                }
+                count++;
+            }
+            if (count > 0)
+            {
+                string way = "";
+                res = getSmallerEqualinationFromSymbols(symbols.GetRange(start, endIndex - start), false, ref way);
+            }
             return res;
         }
 
@@ -518,12 +927,11 @@ namespace math
 
         #region plus and minus
 
-        private SmallEqualination calcPlusAndMinus(List<Symbol> symbols)
+        private void calcPlusAndMinus(List<Symbol> symbols, ref string way, ref SmallEqualination res)
         {
-            SmallEqualination res = new SmallEqualination();
             if (symbols.Count == 0)
             {
-                return res;
+                return;
             }
             //check for minus or plus in the start
             if (symbols[0].Kind == Symbol.SymbolKinds.minus)
@@ -531,7 +939,7 @@ namespace math
                 symbols[1].Num = -symbols[1].Num;
                 symbols.RemoveAt(0);
             }
-            else if (symbols[0].Kind == Symbol.SymbolKinds.plus)
+            else if (symbols[0].Kind == Symbol.SymbolKinds.plus && symbols.Count != 1)
             {
                 symbols.RemoveAt(0);
             }
@@ -551,7 +959,7 @@ namespace math
                     subtractRes(ref res, symbols[i+1]);
                 }
             }
-            return res;
+            way += "\n" + res.ToString();
         }
 
         private void subtractRes(ref SmallEqualination res, Symbol symbol)
@@ -576,7 +984,7 @@ namespace math
         {
             if (symbol.Pow-1 < xList.Count) //already has a x in this pow
             {
-                xList[(int)symbol.Pow - 1] += symbol.Num;
+                xList[symbol.Pow - 1] += symbol.Num;
             }
             else
             {
@@ -584,7 +992,7 @@ namespace math
                 {
                     xList.Add(0);
                 }
-                xList[(int)symbol.Pow - 1] += symbol.Num;
+                xList[symbol.Pow - 1] += symbol.Num;
             }
             return xList;
         }

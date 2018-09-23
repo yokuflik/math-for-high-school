@@ -1,6 +1,6 @@
 ﻿namespace math
 {
-    internal class Symbol
+    public class Symbol
     {
         public Symbol(SymbolKinds kind)
         {

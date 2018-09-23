@@ -8,54 +8,99 @@ namespace math
         {
             Num = 0;
             XList = new List<decimal>();
+            numbersAndX = new List<NumbersAndX>();
         }
 
         public SmallEqualination(decimal num, List<decimal> xList)
         {
             Num = num;
             XList = xList;
+            numbersAndX = new List<NumbersAndX>();
+        }
+
+        public SmallEqualination(decimal num, List<decimal> xList, List<NumbersAndX> numbersAndXes)
+        {
+            Num = num;
+            XList = xList;
+            numbersAndX = numbersAndXes;
         }
 
         public override string ToString()
         {
             string res = "";
 
+            //add the numbers and xes
+            for (int i = 0; i <= numbersAndX.Count - 1; i++)
+            {
+                if (res != "")
+                {
+                    res += " + ";
+                }
+                res += numbersAndX[i].ToString();
+            }
+
             //add all the x powers
             if (XList.Count != 0)
             {
                 for (int i = XList.Count - 1; i >= 1; i--)
                 {
-                    string xString = getStringFromX(XList[i], i + 1, true);
-                    if (xString != "")
-                    {
-                        addToResNumber(ref res, xString);
-                    }
+                    addToResNumber(ref res, XList[i], i + 1, true);
                 }
 
                 //add x power one
-                string XString = getStringFromX(XList[0], 1, false);
-                if (XString != "")
-                {
-                    addToResNumber(ref res, XString);
-                }
+                addToResNumber(ref res, XList[0], 1, true);
             }
 
             //add the number
-            if (Num != 0)
+            if (Num == 0 && res == "")
             {
-                addToResNumber(ref res, Num.ToString());
+                res += "0";
             }
-
+            else
+            {
+                addToResNumber(ref res, Num, 1, false);
+            }
             return res;
         }
 
-        private void addToResNumber(ref string res, string add)
+        public SmallEqualination Clone()
         {
+            SmallEqualination res = new SmallEqualination();
+            res.Num = Num;
+            res.XList = new List<decimal>(XList);
+            res.numbersAndX = new List<NumbersAndX>();
+            for (int i = 0; i <= numbersAndX.Count - 1; i++)
+            {
+                res.numbersAndX.Add(numbersAndX[i].Clone(numbersAndX[i]));
+            }
+            return res;
+        }
+
+        private void addToResNumber(ref string res, decimal num, int power, bool isX)
+        {
+            if (num == 0)
+            {
+                return;
+            }
             if (res != "")
             {
-                res += " + ";
+                if (num > 0)
+                {
+                    res += " + ";
+                }
+                else
+                {
+                    res += " - ";
+                    num = -num;
+                }
             }
-            res += add;
+            if (isX) {
+                res += getStringFromX(num, power, power != 1);//add the power if power!= 1
+            }
+            else
+            {
+                res += num.ToString();
+            }
         }
 
         private string getStringFromX(decimal x, int power, bool putPower)
@@ -86,5 +131,7 @@ namespace math
 
         public decimal Num { get; set; }
         public List<decimal> XList { get; set; }
+
+        public List<NumbersAndX> numbersAndX { get; set; }
     }
 }
