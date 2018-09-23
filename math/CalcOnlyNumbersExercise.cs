@@ -206,6 +206,11 @@ namespace math
             for (int i = 0; i <= smallRes.numbersAndX.Count - 1; i++)
             {
                 //find the common ground
+                if (smallRes.numbersAndX[i].Type == NumbersAndX.NumbersAndXTypes.devide)
+                {
+                    Devide dev = (Devide)smallRes.numbersAndX[i];
+
+                }
             }
         }
 

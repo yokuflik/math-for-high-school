@@ -71,7 +71,7 @@ namespace math
             res.numbersAndX = new List<NumbersAndX>();
             for (int i = 0; i <= numbersAndX.Count - 1; i++)
             {
-                res.numbersAndX.Add(numbersAndX[i].Clone(numbersAndX[i]));
+                res.numbersAndX.Add(numbersAndX[i].Clone());
             }
             return res;
         }

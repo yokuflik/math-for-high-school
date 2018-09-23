@@ -18,7 +18,7 @@ namespace math
             Type = NumbersAndXTypes.regular;
         }
 
-        public NumbersAndX getMinus(NumbersAndX numbersAndX)
+        public virtual NumbersAndX getMinus(NumbersAndX numbersAndX)
         {
             if (numbersAndX.Type == NumbersAndXTypes.devide)
             {
@@ -36,7 +36,7 @@ namespace math
             return null;
         }
 
-        public List<Symbol> getSymbols(NumbersAndX numbersAndX)
+        public virtual List<Symbol> getSymbols(NumbersAndX numbersAndX)
         {
             if (numbersAndX.Type == NumbersAndXTypes.devide)
             {
@@ -55,21 +55,11 @@ namespace math
             return null;
         }
 
-        public NumbersAndX Clone(NumbersAndX numbersAndX)
+        public virtual NumbersAndX Clone()
         {
-            if (numbersAndX.Type == NumbersAndXTypes.devide)
+            if (Type == NumbersAndXTypes.regular)
             {
-                Devide dev = (Devide)numbersAndX;
-                Devide res = new Devide();
-                res.Counter = dev.Counter.Clone();
-                res.Denominator = dev.Denominator.Clone();
-                res.MinusBefore = dev.MinusBefore;
-                res.Type = NumbersAndXTypes.devide;
-                return res;
-            }
-            else if (numbersAndX.Type == NumbersAndXTypes.regular)
-            {
-                return new NumbersAndX(new List<Symbol>(numbersAndX.Symbols));
+                return new NumbersAndX(new List<Symbol>(Symbols));
             }
             return new NumbersAndX();
         }
@@ -115,6 +105,16 @@ namespace math
             Denominator = denominator;
             MinusBefore = minusBefore;
             base.Type = NumbersAndXTypes.devide;
+        }
+
+        public override NumbersAndX Clone()
+        {
+            Devide res = new Devide();
+            res.Counter = Counter.Clone();
+            res.Denominator = Denominator.Clone();
+            res.MinusBefore = MinusBefore;
+            res.Type = NumbersAndXTypes.devide;
+            return res;
         }
 
         public override string ToString()
