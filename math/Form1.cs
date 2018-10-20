@@ -21,22 +21,45 @@ namespace math
         {
             draw = new DrawFuncs(funcPictureBox);
             draw.drawBasicTable(zoomTrackBar.Value*10);
+
+            /*List<FuncDomainDefinition> domainDefinition = new List<FuncDomainDefinition>();
+            domainDefinition.Add(new FuncDomainDefinition(FuncDomainDefinition.DomainDefinitionKinds.xBetweenThen, FuncDomainDefinition.XBetweenKinds.notEquals, 3, 5));//x<3
+            domainDefinition.Add(new FuncDomainDefinition(FuncDomainDefinition.DomainDefinitionKinds.xBigThen, 6));//x>5
+            DifferentialCalculusRes dcr = new DifferentialCalculusRes();
+            dcr.DomainDefinition = domainDefinition;
+            dcr.setDomainDefinition();
+            List<decimal> xes = differentialCalculus.getXFromAnyDomain(domainDefinition);
+
+            string res = "";
+            for (int i = 0; i <= dcr.DomainDefinition.Count - 1; i++)
+            {
+                res += dcr.DomainDefinition[i].ToString()+", ";
+            }*/
+            //MessageBox.Show(res);
+            string way = "";
+            SmallEqualination small = calc.getSmallerEqualinationFromText("1/root(x, 2)-1", ref way);
+            EqualinationRes res = calc.calcRegularEqualinationFromSmallEqualinations(small, new SmallEqualination(), ref way);
+            //MessageBox.Show(res.ToString());
         }
 
         CalcExercise calc = new CalcExercise();
         DrawFuncs draw;
         DifferentialCalculus differentialCalculus = new DifferentialCalculus();
 
+        FuncsViewAndDrawPanel funcsViewAndDrawPanel;
+
         string lastFunc = "";
+        DifferentialCalculusRes diffLastFunc = new DifferentialCalculusRes();
         
         private void calcButton_Click(object sender, EventArgs e)
         {
             if (textBox1.Text != "")
             {
                 lastFunc = textBox1.Text;
-                drawTheLastFunc();
 
-                findAllPointsInFuncs();
+                diffLastFunc =  findAllPointsInFuncs();
+
+                drawTheLastFunc();
                 /*calc.error = false;
                 EqualinationRes res = calc.calcEqualination(textBox1.Text);
                 if (!calc.error)
@@ -46,7 +69,7 @@ namespace math
             }
         }
 
-        private void findAllPointsInFuncs()
+        private DifferentialCalculusRes findAllPointsInFuncs()
         {
             string way = "";
             SmallEqualination smallEqualination = calc.getSmallerEqualinationFromText(lastFunc, ref way);
@@ -55,20 +78,35 @@ namespace math
             //putt the points in the place
             CutsTheXLabel.Text = getStringfromListOfPoints(res.CutsWithX);
             CutsWithXWayLabel.Text = res.CutsWithXWay+"\n";
-            CutsTheYLabel.Text = calc.pointFToString(res.CutWithY);
+            if (res.CutWithY.IsEmpty)
+            {
+                CutsTheYLabel.Text = "None";
+            }
+            else
+            {
+                CutsTheYLabel.Text = calc.pointFToString(res.CutWithY);
+            }
 
             DomainDefinitionLabel.Text = getStringFromDomainDefinition(res.DomainDefinition);
             DomainDefinitionWayLabel.Text = res.DomainDefinitionWay;
 
             AsymatotsWithXLabel.Text = getStringFromAsymatotsWithX(res.AsymatotsWithX);
 
-            AsymatotWithYLabel.Text = "y = "+calc.numberToString(res.AsymatotWithY);
+            if (res.HasAsymatotWithY)
+            {
+                AsymatotWithYLabel.Text = "y = " + calc.numberToString(res.AsymatotWithY);
+            }
+            else
+            {
+                AsymatotWithYLabel.Text = "None";
+            }
             AsymatotWithYWayLabel.Text = res.AsymatotWithYWay;
 
             CuttedFuncLabel.Text = res.CuttedFunc.ToString();
             MinimumPointsLabel.Text = getStringfromListOfPoints(res.MinimumPoints);
             MaximumPointsLabel.Text = getStringfromListOfPoints(res.MaximumPoints);
             minAndMaxWayLabel.Text = res.CuttedFuncAndMinimumMaximumWay+"\n";
+            return res;
         }
 
         private string getStringFromAsymatotsWithX(List<decimal> asymatotsWithX)
@@ -143,7 +181,8 @@ namespace math
             SmallEqualination symbols = calc.getSmallerEqualinationFromText(lastFunc, ref way);
             if (!calc.error)
             {
-                draw.addToDraw(calc.getSymbolsFromSmallEqualination(symbols), (float)0.1);
+                draw.addToDraw(symbols.getSymbols(), (float)0.1);
+                draw.addAsymatotsToDraw(diffLastFunc.AsymatotWithY, diffLastFunc.AsymatotsWithX, diffLastFunc.HasAsymatotWithY);
             }
             else
             {

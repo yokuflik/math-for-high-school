@@ -56,7 +56,7 @@ namespace math
                     //put the x in the equalination
                     float y = (float)calc.putXInEqualination(equalination, x, ref way);
                     PointF p = convertFuncPointToPointOnTheBoard(new PointF(x, y));
-                    if (p.Y < FuncPicture.Height + 1000 && p.Y > -1000)
+                    if (p.Y < FuncPicture.Height + 1000 && p.Y > -1000 && !calc.error)
                     {
                         g.DrawLine(Pens.Black, last, p);
                     }
@@ -66,16 +66,40 @@ namespace math
                 {
 
                 }
+                if (x > 2)
+                {
+
+                }
             }
             bmp.RotateFlip(RotateFlipType.Rotate180FlipX);
             FuncPicture.Image = bmp;
         }
         
+        public void addAsymatotsToDraw(decimal asymatotWithY, List<decimal> asymatotsWithX, bool hasAsymatotWithY)
+        {
+            Bitmap bmp = new Bitmap(FuncPicture.Image);
+            Graphics g = Graphics.FromImage(bmp);
+            Pen p = new Pen(Color.FromArgb(130,Color.Blue), 1);
+            p.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+
+            //draw the asymatot with y
+            if (hasAsymatotWithY)
+            {
+                g.DrawLine(p, 0, convertFuncPointToPointOnTheBoard(new PointF(0, -(float)asymatotWithY)).Y, bmp.Width - 1, convertFuncPointToPointOnTheBoard(new PointF(bmp.Width - 1, -(float)asymatotWithY)).Y);
+            }
+
+            for (int i = 0; i <= asymatotsWithX.Count - 1; i++)
+            {
+                g.DrawLine(p, convertFuncPointToPointOnTheBoard(new PointF((float)asymatotsWithX[i], 0)).X, 0, convertFuncPointToPointOnTheBoard(new PointF((float)asymatotsWithX[i], 0)).X, bmp.Height-1);
+            }
+            FuncPicture.Image = bmp;
+        }
+
         private PointF convertFuncPointToPointOnTheBoard(PointF p)
         {
             return new PointF((p.X + (FuncPicture.Width / SizeOfPoint/ 2)) * (FuncPicture.Width / (FuncPicture.Width / SizeOfPoint)), (p.Y + (FuncPicture.Width / SizeOfPoint / 2)) * (FuncPicture.Width / (FuncPicture.Width / SizeOfPoint)));
         }
-
+        
         public PictureBox FuncPicture { get; set; }
 
         public int SizeOfPoint { get; set; }
